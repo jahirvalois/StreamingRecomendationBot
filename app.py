@@ -8,53 +8,49 @@ load_dotenv()
 
 # Get the API endpoint and authentication token from environment variables
 API_URL = os.getenv("API_ENDPOINT")
-API_TOKEN = os.getenv("API_TOKEN")
+API_KEY = os.getenv("API_TOKEN")
 
-# Create a Streamlit app title
-st.title("Streaming Platform Recommendation Assistant")
+# Streamlit app setup
+st.title("🎥 Streaming Platform Recommendation Assistant 🎬🍿")
+st.write("Ask for movie or series recommendations across Netflix, HBO Max, and Paramount Plus!")
 
-# Create a text input field
-user_input = st.text_input("What's your favorite genre or movie/TV show?")
+# Create a text input field for the user to enter their message
+user_message = st.text_input("Enter your message")
 
-# Create a button to send the request
-if st.button("Get Recommendations"):
-    # Send the request to your API
-    response = requests.post(
-        API_URL,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"},
-        json={"input_value": user_input, "output_type": "chat", "input_type": "chat"}
-    )
+# Create a button to send the message to the backend API
+if st.button("Send"):
+    # Send the user's message to the backend API
+    # Replace the URL with your actual API endpoint
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {API_KEY}"
+    }
+    data = {
+        "input_value": user_message,
+        "output_type": "chat",
+        "input_type": "chat",
+        # Add any other required parameters here
+    }
+    try:
+        response = requests.post(API_URL, headers=headers, json=data)
 
-    # Check if the response was successful
-    if response.status_code == 200:
-        # Get the response data
-        data = response.json()
+        # Display the response from the backend API
+        if response.status_code == 200:
+            # Get the response message
+            data = response.json()
+            ai_message = data["outputs"][0]["outputs"][0]["results"]["message"]["text"]
+            st.write("AI Response:")
+            st.write(ai_message)
 
-        # Extract the message from the response
-        message = data["outputs"][0]["outputs"][0]["results"]["message"]["text"]
-
-        # Display the message in a more user-friendly format
-        st.write(f"**AI:** {message}")
-
-        # Add a text input field to respond to the AI
-        response_input = st.text_input("Your response:")
-
-        # Create a button to send the response
-        if st.button("Send"):
-            # Send the response to the API
-            response = requests.post(
-                API_URL,
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"},
-                json={"input_value": response_input, "output_type": "chat", "input_type": "chat"}
-            )
-
-            # Check if the response was successful
-            if response.status_code == 200:
-                # Get the response data
-                data = response.json()
-
-                # Extract the message from the response
-                message = data["outputs"][0]["outputs"][0]["results"]["message"]["text"]
-
-                # Display the message in a more user-friendly format
-                st.write(f"**AI:** {message}")
+            # Keep the conversation history
+            if 'conversation_history' not in st.session_state:
+                st.session_state.conversation_history = []
+            st.session_state.conversation_history.append({"user": user_message, "ai": ai_message})
+            st.write("Conversation History:")
+            for i, message in enumerate(st.session_state.conversation_history):
+                st.write(f"**Turn {i+1}**")
+                st.write(f"User: {message['user']}")
+                st.write(f"AI: {message['ai']}")
+                st.write("")
+    except Exception as e:
+        st.error(f"Error sending message to the backend API: {e}")
